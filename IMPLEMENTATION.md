@@ -177,8 +177,8 @@ This function provides the per-mirror and global configuration popup.
 
 The popup allows the player to change:
 
-- horizontal angle
-- vertical angle
+- yaw angle
+- pitch angle
 - horizontal position
 - vertical position
 - render distance

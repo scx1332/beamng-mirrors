@@ -405,7 +405,7 @@ end
 -- Pop-up to adjust render settings
 local function renderPopUpViewControl(mirrorID)
   if im.BeginPopup(popupWindowName) then
-    if im.BeginMenu('Horizontal Angle') then
+    if im.BeginMenu('Yaw Angle') then
       local yawAnglePtr = mirrorsYawPtr[mirrorID]
 
       im.PushItemWidth(100)
@@ -417,7 +417,7 @@ local function renderPopUpViewControl(mirrorID)
       im.PopItemWidth()
       im.EndMenu()
     end
-    if im.BeginMenu('Vertical Angle') then
+    if im.BeginMenu('Pitch Angle') then
       local pitchAnglePtr = mirrorsPitchPtr[mirrorID]
 
       im.PushItemWidth(100)
