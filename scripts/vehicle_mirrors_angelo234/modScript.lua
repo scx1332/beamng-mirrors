@@ -1,0 +1,1 @@
+registerCoreModule('scripts/vehicle_mirrors_angelo234/extension')

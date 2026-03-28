@@ -1,0 +1,3 @@
+{
+	"toggle_veh_mirrors_angelo234"		: { "title":"Toggle Vehicle Mirrors", 				"desc":"Toggle Vehicle Mirrors", 	"order": 200, "cat":"vehicle", "ctx": "tlua", "onDown":"scripts_vehicle__mirrors__angelo234_extension.toggleMirrorsUI()" },
+}
