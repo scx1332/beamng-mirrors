@@ -77,6 +77,8 @@ local nearClip = 0.1
 
 local initMirrorsYaw = {7, -7, 0}
 local initMirrorsPitch = {0, 0, 2}
+local initMirrorsHorizontalOffset = {0, 0, 0}
+local initMirrorsVerticalOffset = {0, 0, 0}
 
 -- non-constants (persistent across Lua reloads)
 local lastMode = MODE_OFF
@@ -97,6 +99,8 @@ local mirrorsRotOffset = {nil, nil}
 local intMirrorOffsetVec = nil
 local mirrorsYaw = {initMirrorsYaw[1], initMirrorsYaw[2], initMirrorsYaw[3]}
 local mirrorsPitch = {initMirrorsPitch[1], initMirrorsPitch[2], initMirrorsPitch[3]}
+local mirrorsHorizontalOffset = {initMirrorsHorizontalOffset[1], initMirrorsHorizontalOffset[2], initMirrorsHorizontalOffset[3]}
+local mirrorsVerticalOffset = {initMirrorsVerticalOffset[1], initMirrorsVerticalOffset[2], initMirrorsVerticalOffset[3]}
 
 local mirrorsYawQuat = {
   quatFromAxisAngle(vec3(0,0,1), math.rad(mirrorsYaw[1])),
@@ -129,6 +133,8 @@ local viewports = {
 
 local mirrorsYawPtr = {im.FloatPtr(mirrorsYaw[1]), im.FloatPtr(mirrorsYaw[2]), im.FloatPtr(mirrorsYaw[3])}
 local mirrorsPitchPtr = {im.FloatPtr(mirrorsPitch[1]), im.FloatPtr(mirrorsPitch[2]), im.FloatPtr(mirrorsPitch[3])}
+local mirrorsHorizontalOffsetPtr = {im.FloatPtr(mirrorsHorizontalOffset[1]), im.FloatPtr(mirrorsHorizontalOffset[2]), im.FloatPtr(mirrorsHorizontalOffset[3])}
+local mirrorsVerticalOffsetPtr = {im.FloatPtr(mirrorsVerticalOffset[1]), im.FloatPtr(mirrorsVerticalOffset[2]), im.FloatPtr(mirrorsVerticalOffset[3])}
 local efficientRenderingPtr = im.BoolPtr(efficientRendering)
 local renderDistancePtr = im.IntPtr(farClip / 10)
 local resMultPtr = im.FloatPtr(resMult)
@@ -267,6 +273,7 @@ end
 
 local tempVec1 = vec3(0,0,0)
 local tempVec2 = vec3(0,0,0)
+local tempVec3 = vec3(0,0,0)
 local tempDirVec = vec3(0,0,0)
 local tempUpVec = vec3(0,0,0)
 local tempVehPos = vec3(0,0,0)
@@ -303,6 +310,16 @@ local function getMirrorOrientation(veh, mirrorID, outMat)
       tempVec1:setAdd(tempVec2)
     end
     tempVec1:setScaled(1 / mirrorsNodeGroupCount[mirrorID])
+    if mirrorsHorizontalOffset[mirrorID] ~= 0 then
+      tempVec2:set(tempDirVec)
+      tempVec2:setScaled(mirrorsHorizontalOffset[mirrorID])
+      tempVec1:setAdd(tempVec2)
+    end
+    if mirrorsVerticalOffset[mirrorID] ~= 0 then
+      tempVec2:set(tempUpVec)
+      tempVec2:setScaled(mirrorsVerticalOffset[mirrorID])
+      tempVec1:setAdd(tempVec2)
+    end
     tempVec1:setAdd(tempVehPos)
 
     outMat:setFromQuatF(tempQuat)
@@ -317,6 +334,11 @@ local function getMirrorOrientation(veh, mirrorID, outMat)
     local mirQuat = mirrorsYawQuat[mirrorID] * mirrorsPitchQuat[mirrorID] * vehBackQuat
     tempQuat.x, tempQuat.y, tempQuat.z, tempQuat.w = mirQuat.x, mirQuat.y, mirQuat.z, mirQuat.w
     tempVec1:setAdd2(vehBackQuat:mulP(intMirrorOffsetVec), tempVehPos)
+    if mirrorsHorizontalOffset[mirrorID] ~= 0 or mirrorsVerticalOffset[mirrorID] ~= 0 then
+      tempVec2:set(mirrorsHorizontalOffset[mirrorID], 0, mirrorsVerticalOffset[mirrorID])
+      tempVec3:setAdd2(vehBackQuat:mulP(tempVec2), tempVec1)
+      tempVec1:set(tempVec3)
+    end
 
     outMat:setFromQuatF(tempQuat)
     outMat:setPosition(tempVec1)
@@ -402,6 +424,28 @@ local function renderPopUpViewControl(mirrorID)
       if im.SliderFloat("##pitchAngleSlider", pitchAnglePtr, -30, 30, "%.1f degrees") then
         mirrorsPitch[mirrorID] = pitchAnglePtr[0]
         mirrorsPitchQuat[mirrorID] = quatFromAxisAngle(vec3(1,0,0), math.rad(mirrorsPitch[mirrorID]))
+      end
+
+      im.PopItemWidth()
+      im.EndMenu()
+    end
+    if im.BeginMenu('Horizontal Position') then
+      local horizontalOffsetPtr = mirrorsHorizontalOffsetPtr[mirrorID]
+
+      im.PushItemWidth(100)
+      if im.SliderFloat("##horizontalOffsetSlider", horizontalOffsetPtr, -0.5, 0.5, "%.2f m") then
+        mirrorsHorizontalOffset[mirrorID] = horizontalOffsetPtr[0]
+      end
+
+      im.PopItemWidth()
+      im.EndMenu()
+    end
+    if im.BeginMenu('Vertical Position') then
+      local verticalOffsetPtr = mirrorsVerticalOffsetPtr[mirrorID]
+
+      im.PushItemWidth(100)
+      if im.SliderFloat("##verticalOffsetSlider", verticalOffsetPtr, -0.5, 0.5, "%.2f m") then
+        mirrorsVerticalOffset[mirrorID] = verticalOffsetPtr[0]
       end
 
       im.PopItemWidth()
@@ -568,9 +612,11 @@ local function onUpdate(dt)
   lastMode = mode
 end
 
-local function resetMirrorAngles()
+local function resetMirrorAdjustments()
   mirrorsYaw[1], mirrorsYaw[2], mirrorsYaw[3] = initMirrorsYaw[1], initMirrorsYaw[2], initMirrorsYaw[3]
   mirrorsPitch[1], mirrorsPitch[2], mirrorsPitch[3] = initMirrorsPitch[1], initMirrorsPitch[2], initMirrorsPitch[3]
+  mirrorsHorizontalOffset[1], mirrorsHorizontalOffset[2], mirrorsHorizontalOffset[3] = initMirrorsHorizontalOffset[1], initMirrorsHorizontalOffset[2], initMirrorsHorizontalOffset[3]
+  mirrorsVerticalOffset[1], mirrorsVerticalOffset[2], mirrorsVerticalOffset[3] = initMirrorsVerticalOffset[1], initMirrorsVerticalOffset[2], initMirrorsVerticalOffset[3]
 
   mirrorsYawQuat[1] = quatFromAxisAngle(vec3(0,0,1), math.rad(mirrorsYaw[1]))
   mirrorsPitchQuat[1] = quatFromAxisAngle(vec3(1,0,0), math.rad(mirrorsPitch[1]))
@@ -581,6 +627,8 @@ local function resetMirrorAngles()
 
   mirrorsYawPtr[1], mirrorsYawPtr[2], mirrorsYawPtr[3] = im.FloatPtr(mirrorsYaw[1]), im.FloatPtr(mirrorsYaw[2]), im.FloatPtr(mirrorsYaw[3])
   mirrorsPitchPtr[1], mirrorsPitchPtr[2], mirrorsPitchPtr[3] = im.FloatPtr(mirrorsPitch[1]), im.FloatPtr(mirrorsPitch[2]), im.FloatPtr(mirrorsPitch[3])
+  mirrorsHorizontalOffsetPtr[1], mirrorsHorizontalOffsetPtr[2], mirrorsHorizontalOffsetPtr[3] = im.FloatPtr(mirrorsHorizontalOffset[1]), im.FloatPtr(mirrorsHorizontalOffset[2]), im.FloatPtr(mirrorsHorizontalOffset[3])
+  mirrorsVerticalOffsetPtr[1], mirrorsVerticalOffsetPtr[2], mirrorsVerticalOffsetPtr[3] = im.FloatPtr(mirrorsVerticalOffset[1]), im.FloatPtr(mirrorsVerticalOffset[2]), im.FloatPtr(mirrorsVerticalOffset[3])
 end
 
 local function onVehicleSwitched(oldId, newId, player, secondTime)
@@ -589,7 +637,7 @@ local function onVehicleSwitched(oldId, newId, player, secondTime)
   mirrorsNodeGroupCount[1], mirrorsNodeGroupCount[2] = nil, nil
   intMirrorOffsetVec = nil
 
-  resetMirrorAngles()
+  resetMirrorAdjustments()
 
   -- Super hacky temporary way to make sure flexmeshes are initialized by delaying setup
   if not secondTime then
@@ -659,6 +707,8 @@ local function onSerialize()
 
   data.mirrorsYaw = mirrorsYaw
   data.mirrorsPitch = mirrorsPitch
+  data.mirrorsHorizontalOffset = mirrorsHorizontalOffset
+  data.mirrorsVerticalOffset = mirrorsVerticalOffset
 
   return data
 end
@@ -677,6 +727,8 @@ local function onDeserialized(data)
 
   mirrorsYaw = data.mirrorsYaw
   mirrorsPitch = data.mirrorsPitch
+  mirrorsHorizontalOffset = data.mirrorsHorizontalOffset or {initMirrorsHorizontalOffset[1], initMirrorsHorizontalOffset[2], initMirrorsHorizontalOffset[3]}
+  mirrorsVerticalOffset = data.mirrorsVerticalOffset or {initMirrorsVerticalOffset[1], initMirrorsVerticalOffset[2], initMirrorsVerticalOffset[3]}
 
   -- Calculate mirror angle quats from the saved angles
   mirrorsYawQuat[1] = quatFromAxisAngle(vec3(0,0,1), math.rad(mirrorsYaw[1]))
@@ -690,6 +742,8 @@ local function onDeserialized(data)
   efficientRenderingPtr = im.BoolPtr(efficientRendering)
   mirrorsYawPtr[1], mirrorsYawPtr[2], mirrorsYawPtr[3] = im.FloatPtr(mirrorsYaw[1]), im.FloatPtr(mirrorsYaw[2]), im.FloatPtr(mirrorsYaw[3])
   mirrorsPitchPtr[1], mirrorsPitchPtr[2], mirrorsPitchPtr[3] = im.FloatPtr(mirrorsPitch[1]), im.FloatPtr(mirrorsPitch[2]), im.FloatPtr(mirrorsPitch[3])
+  mirrorsHorizontalOffsetPtr[1], mirrorsHorizontalOffsetPtr[2], mirrorsHorizontalOffsetPtr[3] = im.FloatPtr(mirrorsHorizontalOffset[1]), im.FloatPtr(mirrorsHorizontalOffset[2]), im.FloatPtr(mirrorsHorizontalOffset[3])
+  mirrorsVerticalOffsetPtr[1], mirrorsVerticalOffsetPtr[2], mirrorsVerticalOffsetPtr[3] = im.FloatPtr(mirrorsVerticalOffset[1]), im.FloatPtr(mirrorsVerticalOffset[2]), im.FloatPtr(mirrorsVerticalOffset[3])
   renderDistancePtr = im.IntPtr(farClip / 10)
   resMultPtr = im.FloatPtr(resMult)
 

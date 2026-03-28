@@ -63,7 +63,8 @@ The most important mutable state in `extension.lua` is:
 - `mirrorsRefNodes`: reference nodes used to compute mirror orientation
 - `mirrorsRotOffset`: correction quaternion that aligns the mirror with the vehicle-facing direction
 - `intMirrorOffsetVec`: position of the interior mirror relative to the vehicle reference node
-- `mirrorsYaw` / `mirrorsPitch`: per-mirror adjustment values exposed in the UI
+- `mirrorsYaw` / `mirrorsPitch`: per-mirror angle adjustment values exposed in the UI
+- `mirrorsHorizontalOffset` / `mirrorsVerticalOffset`: per-mirror position offsets used to move mirrors left/right and up/down
 - `renderViews`, `frustums`, `resolutions`, `viewports`: active render infrastructure
 
 This state is what makes the mod feel dynamic: the mirror windows can be moved and resized, the view angles can be tuned, and the data survives serialization.
@@ -119,6 +120,7 @@ For wing mirrors it:
 - reads the current node positions from the live vehicle
 - reconstructs direction and up vectors
 - applies user yaw/pitch adjustments
+- applies optional user horizontal/vertical position offsets
 - applies the precomputed rotation offset
 - averages the mirror node positions to place the camera
 
@@ -127,6 +129,7 @@ For the interior mirror it:
 - uses the vehicle reference node rotation
 - applies the user yaw/pitch adjustments
 - offsets from the vehicle by `intMirrorOffsetVec`
+- applies user horizontal/vertical position offsets
 
 Why it matters:
 
@@ -176,6 +179,8 @@ The popup allows the player to change:
 
 - yaw angle
 - pitch angle
+- horizontal position
+- vertical position
 - render distance
 - resolution multiplier
 - efficient rendering mode
